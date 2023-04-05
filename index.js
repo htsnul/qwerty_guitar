@@ -1,6 +1,86 @@
 let audioCtx = null;
 let guitarStrings = null;
-let noteNumberOffset = 0;
+let noteNumberOffset10 = 0;
+let noteNumberOffset1 = 0;
+
+function getNoteNumberOffset() {
+  return noteNumberOffset10 + noteNumberOffset1;
+}
+
+function renderStyle() {
+  const style = document.createElement("style");
+  style.innerHTML = `
+    table {
+      border-collapse: collapse;
+      font-size: 12px;
+      margin: 8px auto;
+    }
+    table th {
+      font-weight: normal;
+      color: #808080;
+      height: 20px;
+    }
+    table th, td {
+      border: 1px solid #e0e0e0;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function renderTable() {
+  const table = document.createElement("table");
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th colspan="4"></th>
+        <th colspan="10">]</th>
+        <th colspan="10">[</th>
+        <th></th>
+        <th></th>
+        <th colspan="10">[</th>
+        <th colspan="10">]</th>
+        <th colspan="4"></th>
+      </tr>
+      <tr>
+        <th colspan="4"></th>
+        ${[...Array(20)].map((_, i) => `<th>${(19 - i) % 10}</th>`).join("")}
+        <th></th>
+        <th></th>
+        ${[...Array(20)].map((_, i) => `<th>${i % 10}</th>`).join("")}
+        <th colspan="4"></th>
+      </tr>
+    </thead>
+  `;
+  document.body.appendChild(table);
+  renderNoteNumberOffsetBackgrounds();
+}
+
+function renderNoteNumberOffsetBackgrounds() {
+  const thead = document.querySelector("table > thead");
+  const tr10 = thead.querySelector("tr:nth-of-type(1)");
+  for (let i = 0; i < 2; ++i) {
+    for (let j = 0; j < 2; ++j) {
+      const th10 = (
+        j === 0
+        ? tr10.querySelector(`th:nth-of-type(${4 + (1 + i) + 1})`)
+        : tr10.querySelector(`th:nth-of-type(${4 - (1 + i) + 0})`)
+      );
+      th10.style.backgroundColor = i === noteNumberOffset10 / 10 ? "#f0f0f0" : "transparent";
+    }
+  }
+  const tr1 = thead.querySelector("tr:nth-of-type(2)");
+  const noteNumberOffset = getNoteNumberOffset();
+  for (let i = 0; i < 20; ++i) {
+    for (let j = 0; j < 2; ++j) {
+      const th1 = (
+        j === 0
+        ? tr1.querySelector(`th:nth-of-type(${22 + (1 + i) + 1})`)
+        : tr1.querySelector(`th:nth-of-type(${22 - (1 + i) + 0})`)
+      );
+      th1.style.backgroundColor = i === noteNumberOffset ? "#f0f0f0" : "transparent";
+    }
+  }
+}
 
 class GuitarString {
   constructor(parentTable, index, noteNumberBase, keys) {
@@ -33,19 +113,26 @@ class GuitarString {
     this.biquadFilter.connect(this.gain);
     this.oscillator = audioCtx.createOscillator();
     this.oscillator.type = 'sawtooth';
+    const noteNumberOffset = getNoteNumberOffset();
     const noteNumber = this.noteNumberBase + i + noteNumberOffset;
     this.oscillator.frequency.value = 440 * Math.pow(2, (noteNumber - 69) / 12);
     this.oscillator.connect(this.biquadFilter);
     this.oscillator.start();
-    const td = this.trElm.querySelector(`td:nth-of-type(${i + noteNumberOffset + 1})`);
-    td.style.transition = "background 0s";
-    td.style.background = "#c0f0f0";
-    setTimeout(() => {
-      td.style.transition = "background 3s";
-      const sn = [noteNumber % 12];
-      const sc = ["C", "", "D", "", "E", "F", "", "G", "", "A", "", "B", ""][sn];
-      td.style.background = sc !== "" ? "#ffffff" : "#f0f0f0";
-    }, 0);
+    for (let j = 0; j < 2; ++j) {
+      const td = (
+        j === 0
+        ? this.trElm.querySelector(`td:nth-of-type(${25 + (i + noteNumberOffset) + 1})`)
+        : this.trElm.querySelector(`td:nth-of-type(${25 - (i + noteNumberOffset) + 0})`)
+      );
+      td.style.transition = "background 0s";
+      td.style.background = "#c0f0f0";
+      setTimeout(() => {
+        td.style.transition = "background 1s";
+        const sn = [noteNumber % 12];
+        const sc = ["C", "", "D", "", "E", "F", "", "G", "", "A", "", "B", ""][sn];
+        td.style.background = sc !== "" ? "#ffffff" : "#f0f0f0";
+      }, 0);
+    }
   }
   stop() {
     if (!this.oscillator) {
@@ -63,38 +150,51 @@ class GuitarString {
   render() {
     const tr = this.trElm;
     tr.innerHTML = "";
+    const noteNumberOffset = getNoteNumberOffset();
     for (let i = 0; i < 25; ++i) {
       const noteNumber = this.noteNumberBase + i;
       const sn = [noteNumber % 12];
       const on = Math.floor(noteNumber / 12) - 1;
       const sc = ["C", "", "D", "", "E", "F", "", "G", "", "A", "", "B", ""][sn];
       const key = (this.keys[i - noteNumberOffset] ?? "").toUpperCase();
-      const td = document.createElement("td");
-      td.style.width = "20px";
-      td.style.background = sc !== "" ? "#ffffff" : "#f0f0f0";
-      const divS = document.createElement("div");
-      divS.style.display = "grid";
-      divS.style.justifyContent = "center";
-      divS.style.alignItems = "center";
-      divS.style.height = "16px";
-      divS.style.color = "#c0c0c0";
-      divS.innerHTML = `<div>${sc}${sc !== "" ? on : ""}</div>`;
-      const divK = document.createElement("div");
-      divK.style.display = "grid";
-      divK.style.justifyContent = "center";
-      divK.style.alignItems = "center";
-      divK.style.height = "16px";
-      td.appendChild(divS);
-      td.appendChild(divK);
-      tr.appendChild(td);
+      for (let j = 0; j < 2; ++j) {
+        const td = document.createElement("td");
+        td.style.width = "20px";
+        td.style.background = sc !== "" ? "#ffffff" : "#f0f0f0";
+        const divS = document.createElement("div");
+        divS.style.display = "grid";
+        divS.style.justifyContent = "center";
+        divS.style.alignItems = "center";
+        divS.style.height = "16px";
+        divS.style.color = "#c0c0c0";
+        divS.innerHTML = `<div>${sc}${sc !== "" ? on : ""}</div>`;
+        const divK = document.createElement("div");
+        divK.style.display = "grid";
+        divK.style.justifyContent = "center";
+        divK.style.alignItems = "center";
+        divK.style.height = "16px";
+        td.appendChild(divS);
+        td.appendChild(divK);
+        if (j === 0) {
+          tr.appendChild(td);
+        } else {
+          tr.insertBefore(td, tr.firstChild);
+        }
+      }
     }
     this.renderKeyChars();
   }
   renderKeyChars() {
     const tr = this.trElm;
+    const noteNumberOffset = getNoteNumberOffset();
     for (let i = 0; i < 25; ++i) {
       const key = (this.keys[i - noteNumberOffset] ?? "").toUpperCase();
-      const divK = tr.querySelector(`td:nth-of-type(${i + 1}) > div:nth-of-type(2)`);
+      const td = (
+        this.index < 3
+        ? tr.querySelector(`td:nth-of-type(${25 + i + 1})`)
+        : tr.querySelector(`td:nth-of-type(${25 - i + 0})`)
+      );
+      const divK = td.querySelector("div:nth-of-type(2)");
       divK.innerHTML = `<div>${key ? key : ""}</div>`;
     }
   }
@@ -111,93 +211,41 @@ function createAudioContextIfNeeded() {
 
 function renderNoteNumberOffset()
 {
+  renderNoteNumberOffsetBackgrounds();
   guitarStrings.forEach((gs) => gs.renderKeyChars());
 }
 
-onload = () => {
-  const style = document.createElement("style");
-  style.innerHTML = `
-    table {
-      border-collapse: collapse;
-      font-size: 12px;
-      margin: 8px 0;
-    }
-    table th {
-      font-weight: normal;
-      color: #808080;
-      height: 20px;
-    }
-    table th, td {
-      border: 1px solid #e0e0e0;
-    }
-  `;
-  document.head.appendChild(style);
-  const tables = [];
-  for (let i = 0; i < 2; ++i) {
-    const table = document.createElement("table");
-    if (i === 1) {
-      table.style.direction = "rtl";
-    }
-    table.innerHTML = `
-      <tr>
-        <th></th>
-        <th colspan="10">[</th>
-        <th colspan="10">]</th>
-        <th colspan="4"></th>
-      </tr>
-      <tr>
-        <th></th>
-        <th>0</th>
-        <th>1</th>
-        <th>2</th>
-        <th>3</th>
-        <th>4</th>
-        <th>5</th>
-        <th>6</th>
-        <th>7</th>
-        <th>8</th>
-        <th>9</th>
-        <th>0</th>
-        <th>1</th>
-        <th>2</th>
-        <th>3</th>
-        <th>4</th>
-        <th>5</th>
-        <th>6</th>
-        <th>7</th>
-        <th>8</th>
-        <th>9</th>
-        <th colspan="4"></th>
-      </tr>
-    `;
-    document.body.appendChild(table);
-    tables[i] = table;
-  }
-  guitarStrings = [
-    new GuitarString(tables[0], 0, 60 + 0 * 12 + 4 - 1, "yuiop"),
-    new GuitarString(tables[0], 1, 60 - 1 * 12 + 11 - 1, "hjkl;"),
-    new GuitarString(tables[0], 2, 60 - 1 * 12 + 7 - 1, "nm,./"),
-    new GuitarString(tables[1], 3, 60 - 1 * 12 + 2 - 1, "trewq"),
-    new GuitarString(tables[1], 4, 60 - 2 * 12 + 9 - 1, "gfdsa"),
-    new GuitarString(tables[1], 5, 60 - 2 * 12 + 4 - 1, "bvcxz"),
-  ];
-  addEventListener("keydown", (event) => {
-    if ([..."0123456789"].includes(event.key)) {
-      noteNumberOffset = Number(event.key);
-      renderNoteNumberOffset();
-    }
-    if (event.key === "ArrowLeft") {
-      noteNumberOffset--;
-      renderNoteNumberOffset();
-    }
-    if (event.key === "ArrowRight") {
-      noteNumberOffset++;
-      renderNoteNumberOffset();
-    }
-    if (event.key === " ") {
-      guitarStrings.forEach((s) => s.stop());
-    }
+function onKeyDown(event) {
+  if (event.key === "[") {
+    noteNumberOffset10 = 0;
     renderNoteNumberOffset();
-  });
+  }
+  if (event.key === "]") {
+    noteNumberOffset10 = 10;
+    renderNoteNumberOffset();
+  }
+  if ([..."0123456789"].includes(event.key)) {
+    noteNumberOffset1 = Number(event.key);
+    renderNoteNumberOffset();
+  }
+  if (event.key === " ") {
+    guitarStrings.forEach((s) => s.stop());
+  }
+  renderNoteNumberOffset();
+}
+
+onload = () => {
+  renderStyle();
+  renderTable();
+  const table = document.querySelector("table");
+  guitarStrings = [
+    new GuitarString(table, 0, 60 + 0 * 12 + 4 - 1, "yuiop"),
+    new GuitarString(table, 1, 60 - 1 * 12 + 11 - 1, "hjkl;"),
+    new GuitarString(table, 2, 60 - 1 * 12 + 7 - 1, "nm,./"),
+    new GuitarString(table, 3, 60 - 1 * 12 + 2 - 1, "trewq"),
+    new GuitarString(table, 4, 60 - 2 * 12 + 9 - 1, "gfdsa"),
+    new GuitarString(table, 5, 60 - 2 * 12 + 4 - 1, "bvcxz"),
+  ];
+  addEventListener("keydown", (event) => onKeyDown(event));
 };
 
